@@ -1,0 +1,6 @@
+{
+    "cmake.configureArgs": [
+      "-DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk"
+    ]
+  }
+  
