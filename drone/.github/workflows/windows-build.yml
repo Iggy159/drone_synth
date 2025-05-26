@@ -1,3 +1,14 @@
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Hello world
+        run: echo "✅ GitHub Actions работает!"
 name: Build VST3 for Windows
 
 on:
