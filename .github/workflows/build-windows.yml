@@ -19,39 +19,33 @@ jobs:
           fetch-depth: 0
 
       # 2. Установка зависимостей
-      - name: Install dependencies (cmake, VS, workload)
+      - name: Install dependencies (CMake, VS, Workload)
         shell: pwsh
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "cmake install failed"
-            exit $LASTEXITCODE
-          }
+          if ($LASTEXITCODE -ne 0) { throw "CMake install failed" }
 
           choco install visualstudio2022community -y
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Visual Studio install failed"
-            exit $LASTEXITCODE
-          }
+          if ($LASTEXITCODE -ne 0) { throw "VS install failed" }
 
           choco install visualstudio2022-workload-nativedesktop -y
-          $exitCode = $LASTEXITCODE
-          if ($exitCode -eq 3010) {
-            Write-Host "Reboot required — skipping since this is a CI environment"
-            exit 0
-          } elseif ($exitCode -ne 0) {
-            Write-Error "Workload install failed with exit code $exitCode"
-            exit $exitCode
+          if ($LASTEXITCODE -eq 3010) {
+            Write-Host "Reboot required — skipping reboot in CI"
+          } elseif ($LASTEXITCODE -ne 0) {
+            throw "Workload install failed with code $LASTEXITCODE"
           }
 
-      # 3. Загрузка и установка VST3 SDK
+          refreshenv
+
+      # 3. Установка VST3 SDK
       - name: Setup VST3 SDK
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path "externals" -Force
-          Invoke-WebRequest https://github.com/steinbergmedia/vst3sdk/archive/refs/tags/V3.7.9_build_156.zip -OutFile vst3sdk.zip
-          7z x vst3sdk.zip -oexternals
-          Rename-Item externals\vst3sdk-3.7.9_build_156 externals\VST3_SDK -Force
+          if (!(Test-Path "externals")) {
+            New-Item -ItemType Directory -Path "externals" | Out-Null
+          }
+
+          git clone --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
 
       # 4. Конфигурация CMake
       - name: Configure CMake
