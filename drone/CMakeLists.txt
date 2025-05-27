@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 project(DroneSynth VERSION 0.0.1)
 
-set(JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/JUCE")
+set(JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/JUCE")
+
 add_subdirectory(${JUCE_DIR} ${CMAKE_BINARY_DIR}/JUCE)
 
 juce_add_plugin(DroneSynth
@@ -13,7 +14,6 @@ juce_add_plugin(DroneSynth
     COPY_PLUGIN_AFTER_BUILD TRUE
     PLUGIN_MANUFACTURER_CODE Juce
     PLUGIN_CODE DrnS
-    PLUGIN_IS_A_SYNTH TRUE
     PLUGIN_PRODUCES_MIDI_OUTPUT FALSE
     PLUGIN_IS_SYNTH TRUE
     FORMATS VST3 Standalone AU
