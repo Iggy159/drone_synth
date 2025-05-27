@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(DroneSynth VERSION 0.0.1)
 
-set(JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../JUCE")
+set(JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/JUCE")
 add_subdirectory(${JUCE_DIR} ${CMAKE_BINARY_DIR}/JUCE)
 
 juce_add_plugin(DroneSynth
