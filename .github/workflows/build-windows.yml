@@ -49,9 +49,9 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "externals" -Force
-          Invoke-WebRequest https://github.com/steinbergmedia/vst3sdk/archive/refs/tags/V3.7.8.zip -OutFile vst3sdk.zip
+          Invoke-WebRequest https://github.com/steinbergmedia/vst3sdk/archive/refs/tags/V3.7.9_build_156.zip -OutFile vst3sdk.zip
           7z x vst3sdk.zip -oexternals
-          Rename-Item externals\vst3sdk-3.7.8 externals\VST3_SDK -Force
+          Rename-Item externals\vst3sdk-3.7.9_build_156 externals\VST3_SDK -Force
 
       # 4. Конфигурация CMake
       - name: Configure CMake
