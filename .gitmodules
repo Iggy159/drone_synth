@@ -1,3 +1,6 @@
 [submodule "drone/externals/JUCE"]
 	path = drone/externals/JUCE
 	url = https://github.com/juce-framework/JUCE.git
+[submodule "JUCE"]
+	path = JUCE
+	url = https://github.com/juce-framework/JUCE.git
