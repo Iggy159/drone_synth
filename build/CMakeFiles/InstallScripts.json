@@ -1,0 +1,11 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/egor/drone_synth/build/cmake_install.cmake",
+		"/Users/egor/drone_synth/build/externals/JUCE/cmake_install.cmake",
+		"/Users/egor/drone_synth/build/externals/JUCE/modules/cmake_install.cmake",
+		"/Users/egor/drone_synth/build/externals/JUCE/extras/Build/cmake_install.cmake",
+		"/Users/egor/drone_synth/build/externals/JUCE/extras/Build/juceaide/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
