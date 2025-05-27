@@ -30,14 +30,15 @@ juce_add_plugin(DroneSynth
 )
 
 target_sources(DroneSynth PRIVATE
-    Source/PluginProcessor.cpp
-    Source/PluginProcessor.h
-    Source/PluginEditor.cpp
-    Source/PluginEditor.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/drone/Source/PluginProcessor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/drone/Source/PluginProcessor.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/drone/Source/PluginEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/drone/Source/PluginEditor.h
 )
-juce_add_binary_data(PluginResources
+
+juce_add_assets(PluginResources
     SOURCES
-    Resources/background.png  # Ваш файл фона
+    ${CMAKE_CURRENT_SOURCE_DIR}/drone/Resources/background.png
 )
 
 target_compile_definitions(DroneSynth PRIVATE
