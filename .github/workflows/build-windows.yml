@@ -23,19 +23,27 @@ jobs:
         shell: pwsh
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
-          choco install visualstudio2022community -y
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "cmake install failed"
+            exit $LASTEXITCODE
+          }
 
-          # Установка workload с игнорированием кода 3010 (требуется перезагрузка)
+          choco install visualstudio2022community -y
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Visual Studio install failed"
+            exit $LASTEXITCODE
+          }
+
           choco install visualstudio2022-workload-nativedesktop -y
           $exitCode = $LASTEXITCODE
           if ($exitCode -eq 3010) {
-            Write-Host "Reboot required — skipping since this is CI"
+            Write-Host "Reboot required — skipping since this is a CI environment"
             exit 0
           } elseif ($exitCode -ne 0) {
-            Write-Error "Installation failed with exit code $exitCode"
+            Write-Error "Workload install failed with exit code $exitCode"
             exit $exitCode
           }
-      
+
       # 3. Загрузка и установка VST3 SDK
       - name: Setup VST3 SDK
         shell: pwsh
@@ -44,7 +52,7 @@ jobs:
           Invoke-WebRequest https://github.com/steinbergmedia/vst3sdk/archive/refs/tags/V3.7.8.zip -OutFile vst3sdk.zip
           7z x vst3sdk.zip -oexternals
           Rename-Item externals\vst3sdk-3.7.8 externals\VST3_SDK
-      
+
       # 4. Конфигурация CMake
       - name: Configure CMake
         run: >
@@ -52,7 +60,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DJUCE_DIR=${{ github.workspace }}\externals\JUCE
           -DVST3_SDK_DIR=${{ github.workspace }}\externals\VST3_SDK
-      
+
       # 5. Сборка плагина
       - name: Build
         run: cmake --build build --config Release --target DroneSynth_VST3
