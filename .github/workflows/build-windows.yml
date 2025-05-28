@@ -28,11 +28,11 @@ jobs:
           choco install visualstudio2022community -y
           if ($LASTEXITCODE -ne 0) { throw "VS install failed" }
 
-          choco install visualstudio2022-workload-nativedesktop --ignore-checksums -y
-          if ($LASTEXITCODE -eq 3010) {
-            Write-Host "Reboot required — skipping reboot in CI"
-          } elseif ($LASTEXITCODE -ne 0) {
+          choco install visualstudio2022-workload-nativedesktop --ignore-checksums --ignore-reboot -y
+          if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3010) {
             throw "Workload install failed with code $LASTEXITCODE"
+          } else {
+            Write-Host "Workload installed. Reboot suppressed in CI."
           }
 
       # 3. Установка VST3 SDK
