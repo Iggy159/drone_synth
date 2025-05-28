@@ -11,43 +11,38 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Checkout with submodules
+      # Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      # 2. Clean build directory
+      # Clean previous build
       - name: Clean workspace
         shell: pwsh
         run: |
           Remove-Item -Recurse -Force build, externals/VST3_SDK -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path build | Out-Null
 
-      # 3. Install CMake
-      - name: Install CMake
+      # Install CMake and Visual Studio (Community + Native Desktop workload)
+      - name: Install build dependencies
         shell: pwsh
         run: |
-          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y --no-progress
-          cmake --version
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+          choco install visualstudio2022community --ignore-checksums -y
+          choco install visualstudio2022-workload-nativedesktop --ignore-checksums -y --ignore-reboot
 
-      # 4. Install Visual Studio Build Tools
-      - name: Setup MSVC Build Tools
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-          vsversion: 2022
-          toolset: 14.37 # укажем конкретную версию, чтобы избежать ошибки "Toolset 'latest' not found"
-
-      # 5. Install VST3 SDK (очищаем если есть)
+      # Download VST3 SDK
       - name: Get VST3 SDK
         shell: pwsh
         run: |
-          Remove-Item -Recurse -Force externals/VST3_SDK -ErrorAction SilentlyContinue
+          if (Test-Path "externals/VST3_SDK") {
+            Remove-Item -Recurse -Force externals/VST3_SDK
+          }
           git clone --depth 1 --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
 
-      # 6. Configure CMake
+      # Configure
       - name: CMake Configure
         shell: pwsh
         run: |
@@ -58,22 +53,13 @@ jobs:
             -DVST3_SDK_DIR="${{ github.workspace }}/externals/VST3_SDK" `
             -DJUCE_DIR="${{ github.workspace }}/externals/JUCE"
 
-      # 7. Build Plugin
-      - name: CMake Build
+      # Build
+      - name: Build Plugin
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          try {
-            cmake --build build --config Release --target DroneSynth_VST3 -- /m
-          } catch {
-            Write-Host "##[error]Build failed!"
-            if (Test-Path "${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log") {
-              Get-Content "${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log" -Tail 50
-            }
-            throw $_
-          }
+          cmake --build build --config Release --target DroneSynth_VST3 -- /m
 
-      # 8. Upload artifacts
+      # Upload artifacts
       - name: Upload VST3 and Standalone
         uses: actions/upload-artifact@v4
         with:
