@@ -25,10 +25,10 @@ jobs:
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           if ($LASTEXITCODE -ne 0) { throw "CMake install failed" }
 
-          choco install visualstudio2022community -y
+          choco install visualstudio2022community -y --no-progress --ignore-reboot
           if ($LASTEXITCODE -ne 0) { throw "VS install failed" }
 
-          choco install visualstudio2022-workload-nativedesktop -y
+          choco install visualstudio2022-workload-nativedesktop -y --no-progress --ignore-reboot
           if ($LASTEXITCODE -eq 3010) {
             Write-Host "Reboot required — skipping reboot in CI"
           } elseif ($LASTEXITCODE -ne 0) {
