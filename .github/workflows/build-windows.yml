@@ -18,37 +18,22 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      # 2. Установка зависимостей
-      - name: Install dependencies
+      # 2. Установка Visual Studio с нужными компонентами
+      - name: Install Visual Studio
+        uses: microsoft/setup-msbuild@v1
+        with:
+          vs-version: '17.0'  # VS2022
+          components: 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64;Microsoft.VisualStudio.Workload.NativeDesktop'
+
+      # 3. Установка CMake
+      - name: Install CMake
         shell: pwsh
         run: |
-          # Установка CMake
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y --no-progress
           if ($LASTEXITCODE -ne 0) { throw "CMake install failed" }
-
-          # Установка Visual Studio с игнорированием кода 3010
-          choco install visualstudio2022community -y --no-progress
-          if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3010) { 
-            throw "VS install failed with code $LASTEXITCODE" 
-          }
-
-          # Установка Workload с явной обработкой кода 3010
-          choco install visualstudio2022-workload-nativedesktop -y --no-progress
-          if ($LASTEXITCODE -eq 3010) {
-            Write-Host "Reboot required but skipped in CI environment"
-          } elseif ($LASTEXITCODE -ne 0) {
-            throw "Workload install failed with code $LASTEXITCODE"
-          }
-
-          # Альтернативное обновление переменных среды
-          $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + 
-                      [System.Environment]::GetEnvironmentVariable("PATH", "User")
-          
-          # Проверка доступности ключевых инструментов
           cmake --version
-          msbuild /version
 
-      # 3. Установка VST3 SDK
+      # 4. Установка VST3 SDK
       - name: Setup VST3 SDK
         shell: pwsh
         run: |
@@ -57,7 +42,20 @@ jobs:
             git clone --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
           }
 
-      # 4. Конфигурация CMake
+      # 5. Настройка окружения
+      - name: Setup environment
+        shell: pwsh
+        run: |
+          # Добавляем MSBuild в PATH
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -version 17.0 -property installationPath
+          $msbuildPath = Join-Path $vsPath "MSBuild\Current\Bin"
+          Add-Content $env:GITHUB_PATH "$msbuildPath"
+
+          # Проверяем доступность инструментов
+          msbuild /version
+          cmake --version
+
+      # 6. Конфигурация CMake
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -66,11 +64,11 @@ jobs:
             -DJUCE_DIR="${{ github.workspace }}\externals\JUCE" `
             -DVST3_SDK_DIR="${{ github.workspace }}\externals\VST3_SDK"
 
-      # 5. Сборка плагина
+      # 7. Сборка плагина
       - name: Build
         run: cmake --build build --config Release --target DroneSynth_VST3
 
-      # 6. Загрузка артефактов
+      # 8. Загрузка артефактов
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
