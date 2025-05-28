@@ -11,60 +11,32 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Checkout with submodules (если JUCE — сабмодуль)
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      # 2. Clean build directory
-      - name: Clean workspace
+      - name: Install dependencies
         shell: pwsh
         run: |
-          Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path build | Out-Null
-
-      # 3. Setup MSVC
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-          toolset: latest
-          uwp: false
-          vsversion: 2022
-
-      # 4. Install CMake
-      - name: Install CMake
-        shell: pwsh
-        run: |
+          choco install visualstudio2022community -y --no-progress
+          choco install visualstudio2022-workload-nativedesktop -y --ignore-checksums --no-progress
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y --no-progress
-          cmake --version
+          Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+          refreshenv
 
-      # 5. Clone VST3 SDK
       - name: Get VST3 SDK
         shell: pwsh
         run: |
-          if (!(Test-Path "externals/VST3_SDK")) {
-            git clone --depth 1 --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to clone VST3 SDK"
-            }
-          }
+          git clone --depth 1 --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
 
-      # 6. Clone JUCE (если не через submodules)
       - name: Get JUCE
         shell: pwsh
         run: |
-          if (!(Test-Path "externals/JUCE")) {
-            git clone --depth 1 --branch master https://github.com/juce-framework/JUCE.git externals/JUCE
-            if ($LASTEXITCODE -ne 0) {
-              throw "Failed to clone JUCE"
-            }
-          }
+          git clone --depth 1 https://github.com/juce-framework/JUCE.git externals/JUCE
 
-      # 7. Configure with CMake
-      - name: CMake Configure
+      - name: Configure CMake
         shell: pwsh
         run: |
           cmake -B build `
@@ -74,14 +46,12 @@ jobs:
             -DVST3_SDK_DIR="${{ github.workspace }}/externals/VST3_SDK" `
             -DJUCE_DIR="${{ github.workspace }}/externals/JUCE"
 
-      # 8. Build plugin
       - name: Build
         shell: pwsh
         run: |
           cmake --build build --config Release --target DroneSynth_VST3 -- /m
 
-      # 9. Upload build artifacts
-      - name: Upload VST and Standalone
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: DroneSynth-Windows
