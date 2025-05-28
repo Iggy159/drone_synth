@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Checkout with submodules
+      # 1. Checkout with submodules (если JUCE — сабмодуль)
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -25,7 +25,7 @@ jobs:
           Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path build | Out-Null
 
-      # 3. Install VS Build Tools (lightweight alternative)
+      # 3. Setup MSVC
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -41,15 +41,29 @@ jobs:
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y --no-progress
           cmake --version
 
-      # 5. Install VST3 SDK
+      # 5. Clone VST3 SDK
       - name: Get VST3 SDK
         shell: pwsh
         run: |
           if (!(Test-Path "externals/VST3_SDK")) {
             git clone --depth 1 --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to clone VST3 SDK"
+            }
           }
 
-      # 6. Configure with CMake
+      # 6. Clone JUCE (если не через submodules)
+      - name: Get JUCE
+        shell: pwsh
+        run: |
+          if (!(Test-Path "externals/JUCE")) {
+            git clone --depth 1 --branch master https://github.com/juce-framework/JUCE.git externals/JUCE
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to clone JUCE"
+            }
+          }
+
+      # 7. Configure with CMake
       - name: CMake Configure
         shell: pwsh
         run: |
@@ -60,22 +74,14 @@ jobs:
             -DVST3_SDK_DIR="${{ github.workspace }}/externals/VST3_SDK" `
             -DJUCE_DIR="${{ github.workspace }}/externals/JUCE"
 
-      # 7. Build with error handling
-      - name: CMake Build
+      # 8. Build plugin
+      - name: Build
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          try {
-            cmake --build build --config Release --target DroneSynth_VST3 -- /m
-          }
-          catch {
-            Write-Host "##[error]Build failed!"
-            Get-Content "${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log" -Tail 50
-            throw $_
-          }
+          cmake --build build --config Release --target DroneSynth_VST3 -- /m
 
-      # 8. Upload artifacts
-      - name: Upload VST
+      # 9. Upload build artifacts
+      - name: Upload VST and Standalone
         uses: actions/upload-artifact@v4
         with:
           name: DroneSynth-Windows
