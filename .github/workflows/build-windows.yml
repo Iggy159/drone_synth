@@ -1,78 +1,84 @@
-name: Build DroneSynth (Windows)
+name: Windows Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
 
     steps:
-      # 1. Клонирование репозитория
-      - name: Checkout repository
+      # 1. Checkout with submodules
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      # 2. Установка Visual Studio с нужными компонентами
-      - name: Install Visual Studio
-        uses: microsoft/setup-msbuild@v1
-        with:
-          vs-version: '17.0'  # VS2022
-          components: 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64;Microsoft.VisualStudio.Workload.NativeDesktop'
+      # 2. Clean build directory
+      - name: Clean workspace
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path build | Out-Null
 
-      # 3. Установка CMake
+      # 3. Install VS Build Tools (lightweight alternative)
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: latest
+          uwp: false
+          vsversion: 2022
+
+      # 4. Install CMake
       - name: Install CMake
         shell: pwsh
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y --no-progress
-          if ($LASTEXITCODE -ne 0) { throw "CMake install failed" }
           cmake --version
 
-      # 4. Установка VST3 SDK
-      - name: Setup VST3 SDK
+      # 5. Install VST3 SDK
+      - name: Get VST3 SDK
         shell: pwsh
         run: |
           if (!(Test-Path "externals/VST3_SDK")) {
-            New-Item -ItemType Directory -Path "externals" -Force | Out-Null
-            git clone --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
+            git clone --depth 1 --recursive https://github.com/steinbergmedia/vst3sdk.git externals/VST3_SDK
           }
 
-      # 5. Настройка окружения
-      - name: Setup environment
-        shell: pwsh
-        run: |
-          # Добавляем MSBuild в PATH
-          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -version 17.0 -property installationPath
-          $msbuildPath = Join-Path $vsPath "MSBuild\Current\Bin"
-          Add-Content $env:GITHUB_PATH "$msbuildPath"
-
-          # Проверяем доступность инструментов
-          msbuild /version
-          cmake --version
-
-      # 6. Конфигурация CMake
-      - name: Configure CMake
+      # 6. Configure with CMake
+      - name: CMake Configure
         shell: pwsh
         run: |
           cmake -B build `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
             -DCMAKE_BUILD_TYPE=Release `
-            -DJUCE_DIR="${{ github.workspace }}\externals\JUCE" `
-            -DVST3_SDK_DIR="${{ github.workspace }}\externals\VST3_SDK"
+            -DVST3_SDK_DIR="${{ github.workspace }}/externals/VST3_SDK" `
+            -DJUCE_DIR="${{ github.workspace }}/externals/JUCE"
 
-      # 7. Сборка плагина
-      - name: Build
-        run: cmake --build build --config Release --target DroneSynth_VST3
+      # 7. Build with error handling
+      - name: CMake Build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          try {
+            cmake --build build --config Release --target DroneSynth_VST3 -- /m
+          }
+          catch {
+            Write-Host "##[error]Build failed!"
+            Get-Content "${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log" -Tail 50
+            throw $_
+          }
 
-      # 8. Загрузка артефактов
-      - name: Upload artifacts
+      # 8. Upload artifacts
+      - name: Upload VST
         uses: actions/upload-artifact@v4
         with:
-          name: DroneSynth_Windows
+          name: DroneSynth-Windows
           path: |
             build/DroneSynth_artefacts/Release/VST3/DroneSynth.vst3
             build/DroneSynth_artefacts/Release/Standalone/DroneSynth.exe
